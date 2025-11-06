@@ -1,0 +1,10 @@
+# requirements.txt
+fastapi
+uvicorn
+python-multipart
+pandas
+numpy
+scikit-learn==1.4.2
+Pillow
+requests
+gunicorn

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriNova</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+</head>
+<body> 
+    <header class="header">
+        <nav class="navbar">
+            <a href="#" class="logo-link">
+                <img src="images/AgroNova_Logo.png" alt="AgroNova Logo" class="logo-img">
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html" id="nav-home">Home</a></li>
+                <li><a href="predict.html" id="nav-predict">Predict</a></li>
+                <li><a href="about.html" id="nav-about">About us</a></li>
+                <li><a href="support.html" id="nav-support">Support</a></li>
+            </ul>
+            <div class="language-selector">
+                <select id="language-select">
+                    <option value="en">English</option>
+                    <option value="hi">हिन्दी</option>
+                    <option value="mr">मराठी</option>
+                </select>
+            </div>
+        </nav>
+    </header>
+
+    <main class="agri">
+    <div class="agri-hero-background"></div>
+        <div class="agri-content">
+            <p class="agri-subtitle">Soil to Success</p>
+            <h1 class="agri-title">The Science of a Great Harvest</h1>
+            <div class="agri-buttons">
+                <button class="get-started-btn-large">GET STARTED</button>
+                <a href="#features" class="learn-more-btn">LEARN MORE</a>
+            </div>
+        </div>
+    </main>
+
+    <section class="extraordinary-section" id="features" data-aos="fade-up">
+        <div class="section-header">
+            <h3>Our Services</h3>
+            <p>Experience the next generation of farming technology built on deep learning and satellite imaging.</p>
+        </div>
+        <div class="cards-container">
+            <a href="predict.html" class="card-link">
+                <div class="card" data-aos="fade-up" data-aos-delay="100">
+                    <img src="images/undraw_gardening_3tyw.svg" alt="Growing illustration" class="card-icon">
+                    <h3>Crop & Fertilizer Recommendation</h3>
+                    <p>Upload an image of your soil or crop to find the best crops for your land.</p>
+                </div>
+            </a>
+            <a href="guide.html" class="card-link">
+                <div class="card" data-aos="fade-up" data-aos-delay="200">
+                    <img src="images/fertilizer.svg.svg" alt="Science research illustration" class="card-icon">
+                    <h3>Nutrient & Deficiency Guide</h3>
+                    <p>Understand the signs your plants are showing and how to address them for a healthier harvest.</p>
+                </div>
+            </a>
+             <a href="pests-diseases.html" class="card-link">
+                <div class="card" data-aos="fade-up" data-aos-delay="400">
+                    <img src="images/undraw_farming_u62j.svg" alt="Bug fixing illustration" class="card-icon">
+                    <h3>Pest & Disease Detection</h3>
+                    <p>Use our app to identify common pests and diseases affecting your crops.</p>
+                </div>
+            </a>
+            <a href="sustainable.html" class="card-link">
+                <div class="card" data-aos="fade-up" data-aos-delay="300">
+                    <img src="images/soil-analysis.svg" alt="Plant care illustration" class="card-icon">
+                    <h3>Sustainable Practices</h3>
+                    <p>Embrace farming methods that protect the environment, support communities, and ensure profitability for generations to come.</p>
+                </div>
+            </a>
+            <a href="techniques.html" class="card-link">
+                <div class="card" data-aos="fade-up" data-aos-delay="500">
+                    <img src="images/undraw_weather_7n28.svg" alt="Weather illustration" class="card-icon">
+                    <h3>Farming Techniques</h3>
+                    <p>A guide to both traditional and modern methods for cultivating a more sustainable and productive farm.</p>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <section class="customer-reviews-section" data-aos="fade-up">
+        <div class="section-header">
+            <h2>What Our Customers Say</h2>
+        </div>
+        <div class="review-carousel-container">
+            <div class="review-carousel">
+                <div class="review-card">
+                    <p class="review-quote">“AgriNova helped me double my crop yield! The predictions are incredibly accurate.”</p>
+                    <div class="author-info">
+                        <div class="profile-text">
+                            <p class="author-name">Anil B.</p>
+                            <p class="author-title">Small-scale Farmer</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card">
+                    <p class="review-quote">“Finally, a tool that actually understands my soil and gives me great recommendations.”</p>
+                    <div class="author-info">
+                        <div class="profile-text">
+                            <p class="author-name">Pooja S.</p>
+                            <p class="author-title">Agricultural Student</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card">
+                    <p class="review-quote">“I got my crop recommendations in just a few seconds. This app is a game-changer for my farm!”</p>
+                    <div class="author-info">
+                        <div class="profile-text">
+                            <p class="author-name">Rakesh M.</p>
+                            <p class="author-title">Agri-entrepreneur</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-nav-buttons">
+                <button id="prev-review-btn"> &lt; </button>
+                <button id="next-review-btn"> &gt; </button>
+            </div>
+            <div class="carousel-dots-container">
+                <span class="dot active"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init();
+    </script>
+    <script src="script.js"></script>
+</body>
+<footer style="text-align: center; padding: 40px; background-color: var(--dark-accent); color: var(--clean-white); font-size: 14px;">
+        &copy; 2025 AgroNova. All rights reserved.
+    </footer>
+</html>

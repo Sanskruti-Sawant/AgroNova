@@ -1,0 +1,173 @@
+/* Import variables and base styles from the main stylesheet */
+:root {
+    --primary-green: #3D8361;
+    --secondary-green: #68B0AB;
+    --tertiary-green: #C4E0B4;
+    --dark-accent: #2C3E50;
+    --clean-white: #FBFBFB;
+    --light-grey: #ECF0F1;
+    --warm-earth: #E7B10A;
+}
+
+body {
+    background-color: var(--light-grey);
+    color: var(--dark-accent);
+}
+
+.guide-main {
+    padding: 100px 50px 50px;
+    margin-top: 50px; /* Add space for the fixed header */
+}
+
+.guide-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.page-header h1 {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--primary-green);
+    margin-bottom: 10px;
+}
+
+.page-header .subtitle {
+    font-size: 18px;
+    opacity: 0.8;
+}
+
+.section {
+    margin-bottom: 30px;
+}
+
+.section-card {
+    background-color: var(--clean-white);
+    padding: 40px;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.section-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.section-card h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--dark-accent);
+    margin-bottom: 15px;
+}
+
+.section-card .section-description {
+    font-size: 16px;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+.section-card ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.section-card ul li {
+    font-size: 16px;
+    line-height: 1.8;
+    position: relative;
+    padding-left: 25px;
+}
+
+.section-card ul li:before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--secondary-green);
+    font-size: 20px;
+    line-height: 1.6;
+}
+
+.symptom-name {
+    font-weight: 600;
+    color: var(--primary-green);
+}
+
+/* Nutrient-specific cards */
+.nutrient-card {
+    background-color: var(--clean-white);
+    padding: 40px;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.nutrient-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.nutrient-card h3 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-green);
+    margin-bottom: 25px;
+}
+
+.nutrient-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+}
+
+.nutrient-details h4 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--dark-accent);
+    margin-bottom: 10px;
+    border-bottom: 2px solid var(--tertiary-green);
+    padding-bottom: 5px;
+}
+
+.nutrient-details ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.nutrient-details ul li {
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 10px;
+    position: relative;
+    padding-left: 20px;
+}
+
+.nutrient-details ul li:before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--secondary-green);
+    font-size: 18px;
+}
+
+@media (max-width: 768px) {
+    .guide-main {
+        padding: 80px 20px 20px;
+    }
+    .page-header h1 {
+        font-size: 36px;
+    }
+    .page-header .subtitle {
+        font-size: 16px;
+    }
+    .section-card, .nutrient-card {
+        padding: 25px;
+    }
+    .nutrient-details {
+        grid-template-columns: 1fr;
+    }
+}
