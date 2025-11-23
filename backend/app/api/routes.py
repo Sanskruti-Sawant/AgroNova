@@ -63,10 +63,15 @@ async def predict_soil(
     npk_provided = nitrogen is not None or phosphorous is not None or potassium is not None
     image_provided = image is not None
     
+    # ✅ BETTER ERROR MESSAGES
     if not location_provided:
-        raise HTTPException(status_code=400, detail="Location is required.")
+        raise HTTPException(status_code=400, detail="❌ Location is required. Please click 'Use My Current Location' or enter State/Region.")
+    
     if not image_provided and not npk_provided:
-        raise HTTPException(status_code=400, detail="Either a soil image or NPK values are required.")
+        raise HTTPException(status_code=400, detail="❌ Please upload a soil image OR provide NPK values (at least one is required).")
+    
+    if not image_provided:
+        raise HTTPException(status_code=400, detail="❌ Please upload a soil image. The soil type cannot be determined without an image or complete NPK values.")
 
     # Location Resolution
     location_coords = None
@@ -79,7 +84,6 @@ async def predict_soil(
         location_coords = geocode_location_from_text(state, region)
         location_details = get_location_details(location_coords['latitude'], location_coords['longitude'])
 
-
     if location_coords is None or location_details is None:
         print("ERROR: Final check failed - Location could not be resolved.")
         raise HTTPException(status_code=400, detail="Location could not be resolved.")
@@ -91,25 +95,23 @@ async def predict_soil(
         try:
             processed_image = preprocess_image(image)
             predicted_soil_type = get_soil_type(globals.soil_model, processed_image)
+            print(f"✅ Soil type predicted: {predicted_soil_type}")
         except Exception as e:
-            print(f"Soil image processing failed, using default 'Unknown Soil': {e}")
+            print(f"❌ Soil image processing failed: {e}")
+            raise HTTPException(status_code=400, detail=f"Failed to process soil image: {str(e)}")
             
-    # CRITICAL FIX: VALIDATE SOIL TYPE BEFORE ML CALLS
+    # VALIDATE SOIL TYPE
     valid_soil_types = [s.lower() for s in SOIL_CLASSES]
-    
-    # Strip whitespace from the predicted type
     cleaned_soil_type = predicted_soil_type.strip()
     
     if cleaned_soil_type == "Unknown Soil":
         if not npk_provided:
-             raise HTTPException(status_code=400, detail="Soil Type could not be determined and NPK values were not provided. Both are required for prediction.")
-        
-        raise HTTPException(status_code=400, detail="Soil Type could not be determined. Please ensure the image is clear or provide a valid combination of NPK values.")
+            raise HTTPException(status_code=400, detail="❌ Soil Type could not be determined from the image. Please provide NPK values as well.")
+        raise HTTPException(status_code=400, detail="❌ Could not identify soil type from image. Please upload a clearer image.")
 
     if cleaned_soil_type.lower() not in valid_soil_types: 
-        raise HTTPException(status_code=500, detail=f"Invalid Soil Type '{predicted_soil_type}' predicted by model. Check model labels.")
+        raise HTTPException(status_code=500, detail=f"Invalid Soil Type '{predicted_soil_type}' predicted by model. Valid types: {SOIL_CLASSES}")
             
-
     weather_data = get_weather_data(location_coords['latitude'], location_coords['longitude'])
     
     input_features = {
@@ -117,9 +119,8 @@ async def predict_soil(
         'Humidity': weather_data['humidity'],
         'Moisture': weather_data['moisture'], 
         'Soil Type': cleaned_soil_type,
-        
-        'Soil_pH': 6.5, # Mock value for pH
-        'Rainfall': 150.0, # Mock value for Rainfall (mm)
+        'Soil_pH': 6.5,
+        'Rainfall': 150.0,
         'Nitrogen': nitrogen if nitrogen is not None else 0,
         'Phosphorous': phosphorous if phosphorous is not None else 0,
         'Potassium': potassium if potassium is not None else 0,
@@ -135,29 +136,31 @@ async def predict_soil(
     ]}
     
     try:
-        # Pass only the valid subset of features
         crop_suggestions = get_top_n_crop_suggestions(globals.crop_model, globals.crop_encoders, crop_input_features, TOP_N_CROPS)
+        print(f"✅ Crop suggestions generated: {[c.name for c in crop_suggestions]}")
     except Exception as e:
-        print(f"ERROR: Crop prediction failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Crop prediction failed: {e}")
+        print(f"❌ Crop prediction failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Crop prediction failed: {str(e)}")
 
     if not crop_suggestions:
-        print("ERROR: Could not generate crop suggestions (empty list).")
+        print("❌ No crop suggestions generated")
         raise HTTPException(status_code=500, detail="Could not generate crop suggestions.")
         
     top_crop = crop_suggestions[0].name
-    
     input_features['Crop Type'] = top_crop 
+    
     try:
         predicted_fertilizer_name = predict_fertilizer(globals.fert_model, globals.fert_encoders, input_features)
+        print(f"✅ Fertilizer predicted: {predicted_fertilizer_name}")
     except Exception as e:
-        print(f"ERROR: Fertilizer prediction failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Fertilizer prediction failed: {e}")
+        print(f"❌ Fertilizer prediction failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Fertilizer prediction failed: {str(e)}")
     
-    # 3. Final steps
     recommendations = find_fertilizer_recommendation(globals.fertilizer_data, top_crop, predicted_fertilizer_name)
     explanation = generate_explanation(cleaned_soil_type, top_crop, predicted_fertilizer_name)
     inference_time = (time.time() - start_time) * 1000
+    
+    print(f"✅ Prediction completed in {inference_time:.2f}ms")
     
     return SoilPredictionResponse(
         crop_suggestions=crop_suggestions, 

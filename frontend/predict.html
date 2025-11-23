@@ -1,21 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title id="page-title">AgriNova | Predict</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="predict.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Add favicon to prevent 404 error -->
+    <link rel="icon" type="image/png" href="images/AgroNova_Logo.png" />
+    
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="predict.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap"
+        rel="stylesheet"
+    />
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 </head>
-<body>
+
+<body data-api-base="http://localhost:8000">
     <header class="header">
         <nav class="navbar">
             <a href="#" class="logo-link">
-                <img src="images/AgroNova_Logo.png" alt="AgroNova Logo" class="logo-img">
+                <img src="images/AgroNova_Logo.png" alt="AgroNova Logo" class="logo-img" />
             </a>
             <ul class="nav-links">
                 <li><a href="index.html" id="nav-home">Home</a></li>
@@ -33,54 +41,67 @@
         </nav>
     </header>
 
+    <!-- API status badge -->
+    <div id="api-status-badge" class="api-status-badge">API: Checking…</div>
+
     <main class="predict-main">
         <section class="prediction-section" data-aos="fade-up">
             <div class="prediction-form-container" id="prediction-form-container">
                 <h2 class="form-title" id="form-title">Start Your Prediction</h2>
-                <p class="form-subtitle" id="form-subtitle">Upload a soil image and provide your location for a personalized plan.</p>
+                <p class="form-subtitle" id="form-subtitle">
+                    Upload a soil image and provide your location for a personalized plan.
+                </p>
+
                 <form id="prediction-form" class="prediction-form">
                     <div class="form-group">
                         <label for="soil-image" id="label-soil-image">Soil Image (JPG/PNG)</label>
-                        <input type="file" id="soil-image" name="image" accept="image/*" required>
+                        <input type="file" id="soil-image" name="image" accept="image/*" required />
                     </div>
 
                     <div class="form-group location-group">
                         <label id="label-location">Your Location</label>
+
                         <div class="location-inputs-manual">
-                            <input type="text" id="state-input" name="state" placeholder="State">
-                            <input type="text" id="region-input" name="region" placeholder="Region">
-                            <button type="button" id="get-manual-location-btn" class="location-btn-manual">Get Weather</button>
+                            <input type="text" id="state-input" name="state" placeholder="State" />
+                            <input type="text" id="region-input" name="region" placeholder="Region" />
+                            <button type="button" id="get-manual-location-btn" class="location-btn-manual">
+                                Get Weather
+                            </button>
                         </div>
+
                         <div class="or-separator">OR</div>
-                        <button type="button" id="get-location-btn" class="location-btn">Use My Current Location</button>
-                        <div id="weather-details-display" class="weather-details-display" style="display: none;">
-                            </div>
+
+                        <button type="button" id="get-location-btn" class="location-btn">
+                            Use My Current Location
+                        </button>
+
+                        <div id="weather-details-display" class="weather-details-display" style="display: none;"></div>
                     </div>
 
                     <div class="form-group">
                         <label id="label-npk">Optional NPK Values</label>
                         <div class="npk-inputs">
-                            <input type="number" id="nitrogen-input" name="nitrogen" placeholder="Nitrogen (N)">
-                            <input type="number" id="phosphorous-input" name="phosphorous" placeholder="Phosphorous (P)">
-                            <input type="number" id="potassium-input" name="potassium" placeholder="Potassium (K)">
+                            <input type="number" id="nitrogen-input" name="nitrogen" placeholder="Nitrogen (N)" />
+                            <input type="number" id="phosphorous-input" name="phosphorous" placeholder="Phosphorous (P)" />
+                            <input type="number" id="potassium-input" name="potassium" placeholder="Potassium (K)" />
                         </div>
                     </div>
 
-                    <button type="submit" class="submit-btn" id="submit-btn">
-                        Get Prediction
-                    </button>
+                    <button type="submit" class="submit-btn" id="submit-btn">Get Prediction</button>
                 </form>
+
                 <div id="loader" class="loader-container" style="display: none;">
                     <div class="loader"></div>
                     <p id="loader-text">Analyzing soil... this may take a moment.</p>
                 </div>
+
                 <div id="error-message" class="error-message" style="display: none;"></div>
             </div>
 
-            <div class="prediction-results" id="prediction-results" style="display: none;">
-                </div>
+            <div class="prediction-results" id="prediction-results" style="display: none;"></div>
         </section>
     </main>
+
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
     <script>AOS.init();</script>
     <script src="predict.js"></script>

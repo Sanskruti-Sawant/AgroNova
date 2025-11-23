@@ -1,146 +1,119 @@
 # app/services/soil.py
-import numpy as np
 import os
 import io
+import json
+import math
+import time
+import base64
+import logging
+from typing import Dict, Any
+
+import numpy as np
 import requests
-from typing import Dict, List, Any, Tuple
-from fastapi import UploadFile
 from PIL import Image
-from sklearn.neighbors import KNeighborsClassifier
-from app import globals 
-from app.models import WeatherData # Import necessary model for type hinting
 
-IMAGE_SIZE = (64, 64) # Must match ml_utils training size
+logger = logging.getLogger(__name__)
 
-# --- Geocoding Function ---
+OWM_KEY = os.getenv("OPENWEATHER_API_KEY", "").strip()
+
+if not OWM_KEY:
+    logger.warning("OPENWEATHER_API_KEY not found in environment. Weather & geocoding will fail with 400.")
+OWM_GEO_URL = "https://api.openweathermap.org/geo/1.0"
+OWM_WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
+
+HTTP_TIMEOUT = 12  
+SESSION = requests.Session()
+
+
+def preprocess_image(upload_file) -> np.ndarray:
+    """
+    Convert uploaded file to the exact feature vector shape your KNN expects.
+
+    The model error you saw (expects 4096 features) means it was trained on 64x64.
+    We resize to 64x64, convert to grayscale, flatten to length 4096, then scale to [0,1].
+    """
+    try:
+        content = upload_file.file.read()
+        img = Image.open(io.BytesIO(content)).convert("L")  
+        img = img.resize((64, 64))                          
+        arr = np.asarray(img, dtype=np.float32) / 255.0
+        vec = arr.flatten()                               
+        return vec
+    finally:
+        try:
+            upload_file.file.seek(0)
+        except Exception:
+            pass
+
+
+#Geocoding(STATE + REGION -> lat/lon)
 def geocode_location_from_text(state: str, region: str) -> Dict[str, float]:
     """
-    Converts state and region to lat/lng using OpenWeatherMap's Geo API.
+    Use OpenWeather Direct Geocoding (requires API key).
+    Example query: q="Amritsar,Punjab,IN"
     """
-    # FIX: Read the environment variable inside the function
-    OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY") 
-    
-    if not OPENWEATHER_API_KEY:
-        print("WARNING: OPENWEATHER_API_KEY not found. Returning mock coordinates.")
-        return {"latitude": 18.5204, "longitude": 73.8567}
+    if not OWM_KEY:
+        return {"latitude": 0.0, "longitude": 0.0}
 
-    location_query = f"{region},{state},IN"
-    url = f"http://api.openweathermap.org/geo/1.0/direct?q={location_query}&limit=1&appid={OPENWEATHER_API_KEY}"
-    
-    try:
-        # Increased timeout to 15s for stability
-        response = requests.get(url, timeout=15) 
-        response.raise_for_status() 
-        data = response.json()
-        
-        if data:
-            return {"latitude": data[0]['lat'], "longitude": data[0]['lon']}
-        
-        print(f"Geocoding failed for {location_query}. Empty response.")
-    
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR: Geocoding API request failed: {e}")
-        
-    return {"latitude": 0.0, "longitude": 0.0}
+    q = f"{region},{state},IN"
+    params = {"q": q, "limit": 1, "appid": OWM_KEY}
+    r = SESSION.get(f"{OWM_GEO_URL}/direct", params=params, timeout=HTTP_TIMEOUT)
+    r.raise_for_status()
+    data = r.json()
+    if not data:
+        return {"latitude": 0.0, "longitude": 0.0}
+    first = data[0]
+    return {"latitude": float(first["lat"]), "longitude": float(first["lon"])}
 
-# --- Reverse Geocoding Function ---
-def get_location_details(lat: float, lon: float) -> Dict[str, str]:
-    """
-    Fetches country and state from lat/lng using OpenWeatherMap's reverse geocoding API.
-    """
-    # FIX: Read the environment variable inside the function
-    OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY")
-    
-    if not OPENWEATHER_API_KEY:
-        return {"country": "India", "state": "Maharashtra"}
-        
-    url = f"http://api.openweathermap.org/geo/1.0/reverse?lat={lat}&lon={lon}&limit=1&appid={OPENWEATHER_API_KEY}"
-    
-    try:
-        response = requests.get(url, timeout=15)
-        response.raise_for_status()
-        data = response.json()
-        
-        if data:
-            country = data[0].get('country', 'Unknown')
-            state = data[0].get('state', 'Unknown')
-            return {"country": country, "state": state}
-        
-        print("Location details failed. Empty response.")
 
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR: Location Details API request failed: {e}")
-        
-    return {"country": "Unknown", "state": "Unknown"}
+def get_location_details(lat: float, lng: float) -> Dict[str, str]:
+    """
+    Use OpenWeather Reverse Geocoding.
+    """
+    if not OWM_KEY:
+        return {"country": "Unknown", "state": "Unknown"}
 
-# --- Weather Data Function ---
-def get_weather_data(lat: float, lon: float) -> Dict[str, float]:
-    """
-    Fetches current temperature and humidity based on location.
-    Returns mock data on failure.
-    """
-    # FIX: Read the environment variable inside the function
-    OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY")
-    
-    if not OPENWEATHER_API_KEY:
-        print("WARNING: OPENWEATHER_API_KEY not found. Returning mock weather data.")
-        return {"temperature": 25.0, "humidity": 60.0, "moisture": 40.0}
-    
-    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&units=metric&appid={OPENWEATHER_API_KEY}"
-    
-    try:
-        response = requests.get(url, timeout=15)
-        response.raise_for_status() # Catches 4xx, 5xx errors
-        data = response.json()
-        
-        temperature = data['main']['temp']
-        humidity = data['main']['humidity']
-        
-        # Approximate soil moisture
-        moisture = humidity * 0.7
-        
-        return {"temperature": temperature, "humidity": float(humidity), "moisture": moisture}
-        
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR: Weather API request failed. Network/API key issue: {e}")
-    except KeyError:
-        print("ERROR: Weather API response missing expected 'main' data structure.")
-    except Exception as e:
-        print(f"ERROR: General weather data retrieval error: {e}")
+    params = {"lat": lat, "lon": lng, "limit": 1, "appid": OWM_KEY}
+    r = SESSION.get(f"{OWM_GEO_URL}/reverse", params=params, timeout=HTTP_TIMEOUT)
+    r.raise_for_status()
+    data = r.json()
+    if not data:
+        return {"country": "Unknown", "state": "Unknown"}
 
-    # Fallback to mock data if API call or processing fails
-    return {"temperature": 25.0, "humidity": 60.0, "moisture": 40.0}
-        
-# --- Soil Prediction Functions ---
+    first = data[0]
+    country = first.get("country", "Unknown")
+    state = first.get("state") or first.get("name") or "Unknown"
+    return {"country": country, "state": state}
 
-def preprocess_image(image_file: UploadFile) -> np.ndarray:
-# ... (rest of the file remains the same)
+def get_weather_data(lat: float, lng: float) -> Dict[str, float]:
     """
-    Reads, resizes, flattens, and normalizes an uploaded image for the KNN model.
+    Fetch current weather using OpenWeather /weather endpoint.
+    Returns temperature (°C), humidity (%), and a proxy 'moisture' (%).
     """
-    try:
-        image_bytes = image_file.file.read()
-        image = Image.open(io.BytesIO(image_bytes))
-    except Exception as e:
-        raise ValueError(f"Failed to read and open image file: {e}")
+    if not OWM_KEY:
+        raise RuntimeError("OPENWEATHER_API_KEY missing; cannot fetch weather.")
 
-    image = image.resize(IMAGE_SIZE)
-    
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-    
-    # Flatten and normalize as expected by the KNN model
-    img_array = np.array(image).flatten().reshape(1, -1)
-    img_array = img_array.astype('float64') / 255.0
-    
-    return img_array
+    params = {"lat": lat, "lon": lng, "appid": OWM_KEY, "units": "metric"}
+    r = SESSION.get(OWM_WEATHER_URL, params=params, timeout=HTTP_TIMEOUT)
+    r.raise_for_status()
+    data = r.json()
 
-def get_soil_type(knn_model: KNeighborsClassifier, processed_image: np.ndarray) -> str:
+    main = data.get("main", {})
+    temp = float(main.get("temp", 0.0))
+    humidity = float(main.get("humidity", 0.0))
+
+    moisture = max(20.0, min(90.0, humidity * 0.9))
+
+    return {
+        "temperature": temp,
+        "humidity": humidity,
+        "moisture": moisture,
+    }
+
+
+def get_soil_type(knn_model, feature_vec: np.ndarray) -> str:
     """
-    Performs inference on the KNN soil model to predict soil type.
+    Predict soil class from preprocessed vector.
     """
-    if knn_model is None:
-         return "Unknown Soil"
-         
-    # KNN model predicts the label string directly
-    return knn_model.predict(processed_image)[0]
+    pred = knn_model.predict([feature_vec])[0]
+    return str(pred)

@@ -1,392 +1,558 @@
+// predict.js — fixed & hardened
+document.addEventListener("DOMContentLoaded", () => {
+  // ---------------------------
+  // i18n
+  // ---------------------------
+  const translations = {
+    en: {
+      "page-title": "AgriNova | Predict",
+      "nav-home": "Home",
+      "nav-predict": "Predict",
+      "nav-about": "About us",
+      "nav-support": "Support",
+      "form-title": "Start Your Prediction",
+      "form-subtitle":
+        "Upload a soil image and provide your location for a personalized plan.",
+      "label-soil-image": "Soil Image (JPG/PNG)",
+      "label-location": "Your Location",
+      "label-npk": "Optional NPK Values",
+      "btn-location": "Use My Current Location",
+      "btn-manual-weather": "Get Weather",
+      "btn-submit": "Get Prediction",
+      "loader-text": "Analyzing soil... this may take a moment.",
+      "status-detecting": "Detecting your location...",
+      "status-not-detected": "Location not detected.",
+      "error-geolocation-failed": "Geolocation failed:",
+      "error-geolocation-unsupported":
+        "Geolocation is not supported by this browser.",
+      "error-weather-failed": "Failed to fetch weather data. Please try again.",
+      "result-title-weather": "Weather Details",
+      "result-title-crop": "Crop Suggestions",
+      "result-title-fert": "Fertilizer Plan",
+      "result-title-explanation": "Explanation",
+      "result-metadata-time": "Inference Time:",
+      "result-metadata-version": "Model Version:",
+      "result-recommendation-prefix": "We recommend planting",
+      "result-explanation-prefix":
+        "Based on our analysis, your soil is primarily",
+      "result-explanation-mid":
+        "This type of soil is well-suited for growing",
+      "result-explanation-suffix": "The recommended fertilizer,",
+      "result-explanation-end":
+        "is suggested to provide the necessary nutrients for a healthy crop yield.",
+      "weather-temp-label": "Temperature",
+      "weather-humidity-label": "Humidity",
+      "weather-moisture-label": "Moisture",
+      "weather-country-label": "Country",
+      "weather-state-label": "State",
+      "result-top3": "Top 3 predictions",
+      // small UI messages
+      "need-state-region": "Please enter both a state and a region.",
+      "cant-find-coords": "Could not find coordinates for the entered location.",
+      "need-location-first": "Please provide a location first.",
+      "prediction-empty":
+        "Prediction successful, but no valid results were returned.",
+    },
+    hi: {
+      "page-title": "कृषि-नोवा | अनुमान",
+      "nav-home": "होम",
+      "nav-predict": "अनुमान",
+      "nav-about": "हमारे बारे में",
+      "nav-support": "सहयोग",
+      "form-title": "अपना अनुमान शुरू करें",
+      "form-subtitle": "मिट्टी की तस्वीर अपलोड करें और अपनी जगह की जानकारी दें।",
+      "label-soil-image": "मिट्टी की तस्वीर (JPG/PNG)",
+      "label-location": "आपकी जगह",
+      "label-npk": "वैकल्पिक NPK मान",
+      "btn-location": "मेरी वर्तमान जगह का उपयोग करें",
+      "btn-manual-weather": "मौसम प्राप्त करें",
+      "btn-submit": "अनुमान प्राप्त करें",
+      "loader-text":
+        "मिट्टी का विश्लेषण हो रहा है... इसमें थोड़ा समय लग सकता है।",
+      "status-detecting": "आपकी जगह का पता लगाया जा रहा है...",
+      "status-not-detected": "जगह का पता नहीं चला।",
+      "error-geolocation-failed": "जगह की जानकारी विफल:",
+      "error-geolocation-unsupported":
+        "आपके ब्राउज़र में जगह की जानकारी समर्थित नहीं है।",
+      "error-weather-failed":
+        "मौसम का डेटा लाने में विफल। कृपया फिर से प्रयास करें।",
+      "result-title-weather": "मौसम का विवरण",
+      "result-title-crop": "फसल के सुझाव",
+      "result-title-fert": "खाद योजना",
+      "result-title-explanation": "स्पष्टीकरण",
+      "result-metadata-time": "अनुमान समय:",
+      "result-metadata-version": "मॉडल संस्करण:",
+      "result-recommendation-prefix": "हम लगाने की सलाह देते हैं",
+      "result-explanation-prefix":
+        "हमारे विश्लेषण के आधार पर, आपकी मिट्टी मुख्य रूप से है",
+      "result-explanation-mid": "इस प्रकार की मिट्टी में खेती के लिए उपयुक्त है",
+      "result-explanation-suffix": "अनुशंसित उर्वरक,",
+      "result-explanation-end":
+        "को स्वस्थ फसल के लिए आवश्यक पोषक तत्व प्रदान करने का सुझाव दिया गया है।",
+      "weather-temp-label": "तापमान",
+      "weather-humidity-label": "आर्द्रता",
+      "weather-moisture-label": "मातीतील ओलावा",
+      "weather-country-label": "देश",
+      "weather-state-label": "राज्य",
+      "result-top3": "शीर्ष 3 भविष्यवाणियाँ",
+      "need-state-region": "कृपया राज्य और क्षेत्र दोनों दर्ज करें।",
+      "cant-find-coords": "दिए गए स्थान के निर्देशांक नहीं मिल सके।",
+      "need-location-first": "कृपया पहले स्थान प्रदान करें।",
+      "prediction-empty":
+        "पूर्वानुमान सफल रहा, लेकिन कोई मान्य परिणाम नहीं मिला।",
+    },
+    mr: {
+      "page-title": "ॲग्रीनोव्हा | अनुमान",
+      "nav-home": "मुख्यपृष्ठ",
+      "nav-predict": "अनुमान",
+      "nav-about": "आमच्याबद्दल",
+      "nav-support": "सहाय्य",
+      "form-title": "तुमचा अनुमान सुरू करा",
+      "form-subtitle":
+        "मातीचा फोटो अपलोड करा आणि तुमच्या स्थानाची माहिती द्या.",
+      "label-soil-image": "मातीचा फोटो (JPG/PNG)",
+      "label-location": "तुमचे स्थान",
+      "label-npk": "वैकल्पिक NPK मूल्ये",
+      "btn-location": "माझ्या वर्तमान स्थानाचा वापर करा",
+      "btn-manual-weather": "हवामान मिळवा",
+      "btn-submit": "अनुमान मिळवा",
+      "loader-text":
+        "मातीचे विश्लेषण होत आहे... यास थोडा वेळ लागू शकतो.",
+      "status-detecting": "तुमचे स्थान शोधले जात आहे...",
+      "status-not-detecte d": "स्थान सापडले नाही.",
+      "error-geolocation-failed": "स्थान शोधण्यात अयशस्वी:",
+      "error-geolocation-unsupported":
+        "तुमच्या ब्राउझरमध्ये स्थान शोधणे समर्थित नाही.",
+      "error-weather-failed":
+        "हवामानाचा डेटा मिळवण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+      "result-title-weather": "हवामानाचा तपशील",
+      "result-title-crop": "पिकाच्या शिफारसी",
+      "result-title-fert": "खत योजना",
+      "result-title-explanation": "स्पष्टीकरण",
+      "result-metadata-time": "अनुमान वेळ:",
+      "result-metadata-version": "मॉडेल आवृत्ती:",
+      "result-recommendation-prefix": "आम्ही लागवड करण्याची शिफारस करतो",
+      "result-explanation-prefix":
+        "आमच्या विश्लेषणानुसार, तुमची माती प्रामुख्याने आहे",
+      "result-explanation-mid": "या प्रकारची माती शेतीसाठी उपयुक्त आहे",
+      "result-explanation-suffix": "शिफारस केलेले खत,",
+      "result-explanation-end":
+        "निरोगी पिकांसाठी आवश्यक पोषक तत्वे पुरवण्याची शिफारस केली जाते。",
+      "result-top3": "टॉप 3 अंदाज",
+      "need-state-region": "कृपया राज्य आणि प्रदेश दोन्ही भरा.",
+      "cant-find-coords": "दिलेल्या ठिकाणाचे निर्देशांक सापडले नाहीत.",
+      "need-location-first": "कृपया आधी स्थान द्या.",
+      "prediction-empty":
+        "भविष्यवाणी यशस्वी, परंतु कोणतेही वैध परिणाम नाहीत.",
+    },
+  };
 
-document.addEventListener('DOMContentLoaded', () => {
-    const translations = {
-        'en': {
-            'page-title': 'AgriNova | Predict',
-            'nav-home': 'Home',
-            'nav-predict': 'Predict',
-            'nav-about': 'About us',
-            'nav-support': 'Support',
-            'form-title': 'Start Your Prediction',
-            'form-subtitle': 'Upload a soil image and provide your location for a personalized plan.',
-            'label-soil-image': 'Soil Image (JPG/PNG)',
-            'label-location': 'Your Location',
-            'label-npk': 'Optional NPK Values',
-            'btn-location': 'Use My Current Location',
-            'btn-manual-weather': 'Get Weather',
-            'btn-submit': 'Get Prediction',
-            'loader-text': 'Analyzing soil... this may take a moment.',
-            'status-detecting': 'Detecting your location...',
-            'status-not-detected': 'Location not detected.',
-            'error-geolocation-failed': 'Geolocation failed:',
-            'error-geolocation-unsupported': 'Geolocation is not supported by this browser.',
-            'error-weather-failed': 'Failed to fetch weather data. Please try again.',
-            'result-title-weather': 'Weather Details',
-            'result-title-crop': 'Crop Suggestions',
-            'result-title-fert': 'Fertilizer Plan',
-            'result-title-explanation': 'Explanation',
-            'result-metadata-time': 'Inference Time:',
-            'result-metadata-version': 'Model Version:',
-            'result-recommendation-prefix': 'We recommend planting',
-            'result-explanation-prefix': 'Based on our analysis, your soil is primarily',
-            'result-explanation-mid': 'This type of soil is well-suited for growing',
-            'result-explanation-suffix': 'The recommended fertilizer,',
-            'result-explanation-end': 'is suggested to provide the necessary nutrients for a healthy crop yield.',
-            'weather-temp-label': 'Temperature',
-            'weather-humidity-label': 'Humidity',
-            'weather-moisture-label': 'Moisture',
-            'weather-country-label': 'Country',
-            'weather-state-label': 'State'
-        },
-        'hi': {
-            'page-title': 'कृषि-नोवा | अनुमान',
-            'nav-home': 'होम',
-            'nav-predict': 'अनुमान',
-            'nav-about': 'हमारे बारे में',
-            'nav-support': 'सहयोग',
-            'form-title': 'अपना अनुमान शुरू करें',
-            'form-subtitle': 'मिट्टी की तस्वीर अपलोड करें और अपनी जगह की जानकारी दें।',
-            'label-soil-image': 'मिट्टी की तस्वीर (JPG/PNG)',
-            'label-location': 'आपकी जगह',
-            'label-npk': 'वैकल्पिक NPK मान',
-            'btn-location': 'मेरी वर्तमान जगह का उपयोग करें',
-            'btn-manual-weather': 'मौसम प्राप्त करें',
-            'btn-submit': 'अनुमान प्राप्त करें',
-            'loader-text': 'मिट्टी का विश्लेषण हो रहा है... इसमें थोड़ा समय लग सकता है।',
-            'status-detecting': 'आपकी जगह का पता लगाया जा रहा है...',
-            'status-not-detected': 'जगह का पता नहीं चला।',
-            'error-geolocation-failed': 'जगह की जानकारी विफल:',
-            'error-geolocation-unsupported': 'आपके ब्राउज़र में जगह की जानकारी समर्थित नहीं है।',
-            'error-weather-failed': 'मौसम का डेटा लाने में विफल। कृपया फिर से प्रयास करें।',
-            'result-title-weather': 'मौसम का विवरण',
-            'result-title-crop': 'फसल के सुझाव',
-            'result-title-fert': 'खाद योजना',
-            'result-title-explanation': 'स्पष्टीकरण',
-            'result-metadata-time': 'अनुमान समय:',
-            'result-metadata-version': 'मॉडल संस्करण:',
-            'result-recommendation-prefix': 'हम लगाने की सलाह देते हैं',
-            'result-explanation-prefix': 'हमारे विश्लेषण के आधार पर, आपकी मिट्टी मुख्य रूप से है',
-            'result-explanation-mid': 'इस प्रकार की मिट्टी में खेती के लिए उपयुक्त है',
-            'result-explanation-suffix': 'अनुशंसित उर्वरक,',
-            'result-explanation-end': 'को स्वस्थ फसल के लिए आवश्यक पोषक तत्व प्रदान करने का सुझाव दिया गया है।',
-            'weather-temp-label': 'तापमान',
-            'weather-humidity-label': 'आर्द्रता',
-            'weather-moisture-label': 'मातीतील ओलावा',
-            'weather-country-label': 'देश',
-            'weather-state-label': 'राज्य'
-        },
-        'mr': {
-            'page-title': 'ॲग्रीनोव्हा | अनुमान',
-            'nav-home': 'मुख्यपृष्ठ',
-            'nav-predict': 'अनुमान',
-            'nav-about': 'आमच्याबद्दल',
-            'nav-support': 'सहाय्य',
-            'form-title': 'तुमचा अनुमान सुरू करा',
-            'form-subtitle': 'मातीचा फोटो अपलोड करा आणि तुमच्या स्थानाची माहिती द्या.',
-            'label-soil-image': 'मातीचा फोटो (JPG/PNG)',
-            'label-location': 'तुमचे स्थान',
-            'label-npk': 'वैकल्पिक NPK मूल्ये',
-            'btn-location': 'माझ्या वर्तमान स्थानाचा वापर करा',
-            'btn-manual-weather': 'हवामान मिळवा',
-            'btn-submit': 'अनुमान मिळवा',
-            'loader-text': 'मातीचे विश्लेषण होत आहे... यास थोडा वेळ लागू शकतो.',
-            'status-detecting': 'तुमचे स्थान शोधले जात आहे...',
-            'status-not-detected': 'स्थान सापडले नाही.',
-            'error-geolocation-failed': 'स्थान शोधण्यात अयशस्वी:',
-            'error-geolocation-unsupported': 'तुमच्या ब्राउझरमध्ये स्थान शोधणे समर्थित नाही.',
-            'error-weather-failed': 'हवामानाचा डेटा मिळवण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.',
-            'result-title-weather': 'हवामानाचा तपशील',
-            'result-title-crop': 'पिकाच्या शिफारसी',
-            'result-title-fert': 'खत योजना',
-            'result-title-explanation': 'स्पष्टीकरण',
-            'result-metadata-time': 'अनुमान वेळ:',
-            'result-metadata-version': 'मॉडेल आवृत्ती:',
-            'result-recommendation-prefix': 'आम्ही लागवड करण्याची शिफारस करतो',
-            'result-explanation-prefix': 'आमच्या विश्लेषणानुसार, तुमची माती प्रामुख्याने आहे',
-            'result-explanation-mid': 'या प्रकारची माती शेतीसाठी उपयुक्त आहे',
-            'result-explanation-suffix': 'शिफारस केलेले खत,',
-            'result-explanation-end': 'निरोगी पिकांसाठी आवश्यक पोषक तत्वे पुरवण्याची शिफारस केली जाते।'
-        }
+  const languageSelect = document.getElementById("language-select");
+  const t = (key, lang) => {
+    const l = lang || (languageSelect ? languageSelect.value : "en");
+    return (translations[l] && translations[l][key]) ||
+      (translations["en"] && translations["en"][key]) ||
+      key;
+  };
+
+  function updateContent(lang) {
+    const setText = (id, key) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = t(key, lang);
     };
-    
-    function updateContent(lang) {
-    
-        document.getElementById('page-title').textContent = translations[lang]['page-title'];
-        // The nav links need to be found by ID for translation
-        const navHome = document.getElementById('nav-home');
-        if(navHome) navHome.textContent = translations[lang]['nav-home'];
-        document.getElementById('nav-predict').textContent = translations[lang]['nav-predict'];
-        document.getElementById('nav-about').textContent = translations[lang]['nav-about'];
-        document.getElementById('nav-support').textContent = translations[lang]['nav-support'];
+    setText("page-title", "page-title");
+    setText("nav-home", "nav-home");
+    setText("nav-predict", "nav-predict");
+    setText("nav-about", "nav-about");
+    setText("nav-support", "nav-support");
+    setText("form-title", "form-title");
+    setText("form-subtitle", "form-subtitle");
+    setText("label-soil-image", "label-soil-image");
+    setText("label-location", "label-location");
+    setText("label-npk", "label-npk");
+    setText("get-location-btn", "btn-location");
+    setText("get-manual-location-btn", "btn-manual-weather");
+    setText("submit-btn", "btn-submit");
+    setText("loader-text", "loader-text");
+  }
 
-        // Form elements
-        document.getElementById('form-title').textContent = translations[lang]['form-title'];
-        document.getElementById('form-subtitle').textContent = translations[lang]['form-subtitle'];
-        document.getElementById('label-soil-image').textContent = translations[lang]['label-soil-image'];
-        document.getElementById('label-location').textContent = translations[lang]['label-location'];
-        document.getElementById('label-npk').textContent = translations[lang]['label-npk'];
-        document.getElementById('get-location-btn').textContent = translations[lang]['btn-location'];
-        
-        // Check for manual button before translating
-        const manualBtn = document.getElementById('get-manual-location-btn');
-        if (manualBtn) {
-            manualBtn.textContent = translations[lang]['btn-manual-weather'];
-        }
+  if (languageSelect) {
+    languageSelect.addEventListener("change", (e) =>
+      updateContent(e.target.value)
+    );
+  }
 
-        document.getElementById('submit-btn').textContent = translations[lang]['btn-submit'];
-        document.getElementById('loader-text').textContent = translations[lang]['loader-text'];
+  // ---------------------------
+  // DOM refs
+  // ---------------------------
+  const form = document.getElementById("prediction-form");
+  const imageInput = document.getElementById("soil-image");
+  const stateInput = document.getElementById("state-input");
+  const regionInput = document.getElementById("region-input");
+  const nitrogenInput = document.getElementById("nitrogen-input");
+  const phosphorousInput = document.getElementById("phosphorous-input");
+  const potassiumInput = document.getElementById("potassium-input");
+  const getLocationBtn = document.getElementById("get-location-btn");
+  const getManualLocationBtn = document.getElementById(
+    "get-manual-location-btn"
+  );
+  const submitBtn = document.getElementById("submit-btn");
+  const weatherDisplay = document.getElementById("weather-details-display");
+  const loader = document.getElementById("loader");
+  const errorMessage = document.getElementById("error-message");
+  const resultsContainer = document.getElementById("prediction-results");
+  const formContainer = document.getElementById("prediction-form-container");
+  const apiBadge = document.getElementById("api-status-badge");
+
+  // ---------------------------
+  // API base & endpoints
+  // ---------------------------
+  function getApiBase() {
+    const el = document.body;
+    const attr = el ? el.getAttribute("data-api-base") : null;
+    // default to backend container
+    return (attr && attr.trim()) || "http://localhost:8000";
+  }
+  const API_BASE = getApiBase();
+  const API_PREDICT_URL = `${API_BASE}/api/predict/soil`;
+  const API_WEATHER_URL = `${API_BASE}/api/weather`;
+  const API_GEOCODE_URL = `${API_BASE}/api/geocode`;
+  const API_HEALTH_URL = `${API_BASE}/health`;
+
+  // ---------------------------
+  // Health check badge
+  // ---------------------------
+  async function pingHealth() {
+    try {
+      const res = await fetch(API_HEALTH_URL, { method: "GET" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (apiBadge) {
+        apiBadge.textContent = `API: Connected (${data.message || "OK"})`;
+        apiBadge.classList.remove("bad");
+        apiBadge.classList.add("ok");
+      }
+    } catch (e) {
+      if (apiBadge) {
+        apiBadge.textContent = `API: Offline (${e.message})`;
+        apiBadge.classList.remove("ok");
+        apiBadge.classList.add("bad");
+      }
     }
+  }
+  pingHealth();
 
-    const form = document.getElementById('prediction-form');
-    const imageInput = document.getElementById('soil-image');
-    const stateInput = document.getElementById('state-input');
-    const regionInput = document.getElementById('region-input');
-    const nitrogenInput = document.getElementById('nitrogen-input');
-    const phosphorousInput = document.getElementById('phosphorous-input');
-    const potassiumInput = document.getElementById('potassium-input');
-    const getLocationBtn = document.getElementById('get-location-btn');
-    const getManualLocationBtn = document.getElementById('get-manual-location-btn');
-    const submitBtn = document.getElementById('submit-btn');
-    const weatherDisplay = document.getElementById('weather-details-display');
-    const loader = document.getElementById('loader');
-    const errorMessage = document.getElementById('error-message');
-    const resultsContainer = document.getElementById('prediction-results');
-    const formContainer = document.getElementById('prediction-form-container');
-    const languageSelect = document.getElementById('language-select');
-
-    const API_PREDICT_URL = 'http://localhost:8000/api/predict/soil';
-    const API_WEATHER_URL = 'http://localhost:8000/api/weather';
-    const API_GEOCODE_URL = 'http://localhost:8000/api/geocode';
-
-    let currentLat = null;
-    let currentLng = null;
-
-    // Event listener for language selector
-    if (languageSelect) {
-        languageSelect.addEventListener('change', (e) => {
-            const selectedLang = e.target.value;
-            updateContent(selectedLang);
-        });
+  // ---------------------------
+  // UI helpers
+  // ---------------------------
+  function showLoader() {
+    if (loader) loader.style.display = "flex";
+    if (submitBtn) submitBtn.disabled = true;
+    if (formContainer) formContainer.style.display = "none";
+    if (resultsContainer) resultsContainer.style.display = "none";
+  }
+  function hideLoader() {
+    if (loader) loader.style.display = "none";
+    if (submitBtn) submitBtn.disabled = false;
+    if (formContainer) formContainer.style.display = "block";
+  }
+  function showError(message) {
+    if (errorMessage) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = "block";
     }
+    if (resultsContainer) resultsContainer.style.display = "none";
+  }
+  function hideError() {
+    if (errorMessage) errorMessage.style.display = "none";
+  }
+  function ensureJsonResponseOk(res, endpointName) {
+    if (!res.ok) {
+      throw new Error(`${endpointName} failed with HTTP ${res.status}`);
+    }
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      throw new Error(`${endpointName} returned non-JSON response`);
+    }
+  }
 
-    // Call to update content based on default language on load
-    updateContent(languageSelect ? languageSelect.value : 'en'); 
-    
-    // Function to fetch and display weather details
-    const fetchAndDisplayWeather = async (lat, lng) => {
-        try {
-            const weatherResponse = await fetch(`${API_WEATHER_URL}?lat=${lat}&lng=${lng}`);
-            const weatherData = await weatherResponse.json();
-            const lang = languageSelect.value;
+  // ---------------------------
+  // Weather fetch + display
+  // ---------------------------
+  let currentLat = null;
+  let currentLng = null;
 
-            weatherDisplay.innerHTML = `
-                <strong>${translations[lang]['weather-country-label']}:</strong> ${weatherData.country}<br>
-                <strong>${translations[lang]['weather-state-label']}:</strong> ${weatherData.state}<br>
-                <strong>${translations[lang]['weather-temp-label']}:</strong> ${weatherData.temperature.toFixed(2)} °C<br>
-                <strong>${translations[lang]['weather-humidity-label']}:</strong> ${weatherData.humidity.toFixed(2)}%<br>
-                <strong>${translations[lang]['weather-moisture-label']}:</strong> ${weatherData.moisture.toFixed(2)}%
-            `;
-            weatherDisplay.style.display = 'block';
-            submitBtn.disabled = false;
-            currentLat = lat;
-            currentLng = lng;
-        } catch (err) {
-            showError(translations[languageSelect.value]['error-weather-failed']);
-            submitBtn.disabled = true;
-        }
-    };
+  async function fetchAndDisplayWeather(lat, lng) {
+    try {
+      const url = `${API_WEATHER_URL}?lat=${encodeURIComponent(
+        lat
+      )}&lng=${encodeURIComponent(lng)}`;
+      const weatherResponse = await fetch(url, { method: "GET" });
+      ensureJsonResponseOk(weatherResponse, "Weather");
+      const weatherData = await weatherResponse.json();
 
-    // Event listener for "Use My Current Location" button
-    getLocationBtn.addEventListener('click', () => {
-        weatherDisplay.innerHTML = translations[languageSelect.value]['status-detecting'];
-        weatherDisplay.style.display = 'block';
-        submitBtn.disabled = true;
+      const lang = languageSelect ? languageSelect.value : "en";
+      if (weatherDisplay) {
+        weatherDisplay.innerHTML = `
+          <strong>${t("weather-country-label", lang)}:</strong> ${
+          weatherData.country
+        }<br>
+          <strong>${t("weather-state-label", lang)}:</strong> ${
+          weatherData.state
+        }<br>
+          <strong>${t("weather-temp-label", lang)}:</strong> ${Number(
+          weatherData.temperature
+        ).toFixed(2)} °C<br>
+          <strong>${t("weather-humidity-label", lang)}:</strong> ${Number(
+          weatherData.humidity
+        ).toFixed(2)}%<br>
+          <strong>${t("weather-moisture-label", lang)}:</strong> ${Number(
+          weatherData.moisture
+        ).toFixed(2)}%
+        `;
+        weatherDisplay.style.display = "block";
+      }
+      if (submitBtn) submitBtn.disabled = false;
 
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    // This is the call that gets the weather data
-                    fetchAndDisplayWeather(position.coords.latitude, position.coords.longitude);
-                },
-                (err) => {
-                    showError(translations[languageSelect.value]['error-geolocation-failed'] + ` ${err.message}`);
-                    weatherDisplay.innerHTML = translations[languageSelect.value]['status-not-detected'];
-                    submitBtn.disabled = true;
-                }
+      currentLat = lat;
+      currentLng = lng;
+    } catch (err) {
+      console.error("Weather fetch error:", err);
+      showError(`${t("error-weather-failed")} (${err.message})`);
+      if (submitBtn) submitBtn.disabled = true;
+      if (weatherDisplay) weatherDisplay.style.display = "none";
+      currentLat = null;
+      currentLng = null;
+    }
+  }
+
+  // ---------------------------
+  // Location buttons
+  // ---------------------------
+  if (getLocationBtn) {
+    getLocationBtn.addEventListener("click", () => {
+      hideError();
+      if (weatherDisplay) {
+        weatherDisplay.textContent = t("status-detecting");
+        weatherDisplay.style.display = "block";
+      }
+      if (submitBtn) submitBtn.disabled = true;
+
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            fetchAndDisplayWeather(
+              position.coords.latitude,
+              position.coords.longitude
             );
+          },
+          (err) => {
+            console.error("Geolocation error:", err);
+            showError(`${t("error-geolocation-failed")} ${err.message}`);
+            if (weatherDisplay)
+              weatherDisplay.textContent = t("status-not-detected");
+            if (submitBtn) submitBtn.disabled = true;
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      } else {
+        showError(t("error-geolocation-unsupported"));
+        if (weatherDisplay)
+          weatherDisplay.textContent = t("status-not-detected");
+        if (submitBtn) submitBtn.disabled = true;
+      }
+    });
+  }
+
+  if (getManualLocationBtn) {
+    getManualLocationBtn.addEventListener("click", async () => {
+      hideError();
+      const state = (stateInput && stateInput.value ? stateInput.value : "")
+        .trim();
+      const region = (regionInput && regionInput.value
+        ? regionInput.value
+        : ""
+      ).trim();
+
+      if (!state || !region) {
+        showError(t("need-state-region"));
+        return;
+      }
+
+      try {
+        const url = `${API_GEOCODE_URL}?state=${encodeURIComponent(
+          state
+        )}&region=${encodeURIComponent(region)}`;
+        const geocodeResponse = await fetch(url);
+        ensureJsonResponseOk(geocodeResponse, "Geocode");
+        const geocodeData = await geocodeResponse.json();
+        if (geocodeData.latitude && geocodeData.longitude) {
+          fetchAndDisplayWeather(geocodeData.latitude, geocodeData.longitude);
         } else {
-            showError(translations[languageSelect.value]['error-geolocation-unsupported']);
-            weatherDisplay.innerHTML = translations[languageSelect.value]['status-not-detected'];
-            submitBtn.disabled = true;
+          showError(t("cant-find-coords"));
         }
+      } catch (err) {
+        console.error("Geocode error:", err);
+        showError(`Failed to get location coordinates. (${err.message})`);
+      }
     });
+  }
 
-    // Event listener for "Get Weather" button
-    if (getManualLocationBtn) {
-        getManualLocationBtn.addEventListener('click', async () => {
-            const state = stateInput.value;
-            const region = regionInput.value;
+  // ---------------------------
+  // Submit prediction
+  // ---------------------------
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideError();
+      showLoader();
 
-            if (!state || !region) {
-                showError("Please enter both a state and a region.");
-                return;
-            }
+      if (!currentLat || !currentLng) {
+        showError(t("need-location-first"));
+        hideLoader();
+        return;
+      }
 
-            try {
-                // First, geocode the text location to get coordinates
-                const geocodeResponse = await fetch(`${API_GEOCODE_URL}?state=${state}&region=${region}`);
-                const geocodeData = await geocodeResponse.json();
-                
-                if (geocodeData.latitude && geocodeData.longitude) {
-                    // Second, use the coordinates to fetch and display the weather
-                    fetchAndDisplayWeather(geocodeData.latitude, geocodeData.longitude);
-                } else {
-                    showError('Could not find coordinates for the entered location.');
-                }
-            } catch (err) {
-                showError('Failed to get location coordinates. Please try again.');
-            }
-        });
-    }
-
-    // Handle form submission - FIX APPLIED HERE
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        hideError();
-        showLoader();
-        
-        if (!currentLat || !currentLng) {
-            showError('Please provide a location first.');
-            hideLoader();
-            return;
-        }
-
+      try {
         const formData = new FormData();
-        // Check if an image file is selected before appending
-        if (imageInput.files.length > 0) {
-            formData.append('image', imageInput.files[0]);
+        if (imageInput && imageInput.files.length > 0) {
+          formData.append("image", imageInput.files[0]);
         }
-        
-        formData.append('lat', currentLat);
-        formData.append('lng', currentLng);
-        
-        // Append NPK values only if they are not empty
-        if (nitrogenInput.value) formData.append('nitrogen', nitrogenInput.value);
-        if (phosphorousInput.value) formData.append('phosphorous', phosphorousInput.value);
-        if (potassiumInput.value) formData.append('potassium', potassiumInput.value);
+        formData.append("lat", String(currentLat));
+        formData.append("lng", String(currentLng));
+        if (nitrogenInput && nitrogenInput.value)
+          formData.append("nitrogen", nitrogenInput.value);
+        if (phosphorousInput && phosphorousInput.value)
+          formData.append("phosphorous", phosphorousInput.value);
+        if (potassiumInput && potassiumInput.value)
+          formData.append("potassium", potassiumInput.value);
 
-        try {
-            const response = await fetch(API_PREDICT_URL, {
-                method: 'POST',
-                body: formData,
-            });
+        const response = await fetch(API_PREDICT_URL, {
+          method: "POST",
+          body: formData,
+        });
+        ensureJsonResponseOk(response, "Prediction");
+        const data = await response.json();
 
-            let data;
-            
-            // If response status is bad (4xx, 5xx), attempt to get error detail
-            if (!response.ok) {
-                let errorMessageDetail = `Server error: ${response.status}`;
-                try {
-                    // Try to read JSON error body from server
-                    const errorData = await response.json();
-                    errorMessageDetail = errorData.detail || errorMessageDetail;
-                } catch (jsonError) {
-                    // Fallback if the bad status has no JSON body (e.g., 500 from proxy)
-                    errorMessageDetail += " (Could not parse error details)";
-                }
-                throw new Error(errorMessageDetail);
-            }
-            
-            // CRITICAL FIX: Robustly check response for valid JSON data
-            const contentType = response.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-                throw new Error("Prediction API returned a non-JSON or empty response.");
-            }
-            
-            try {
-                 data = await response.json();
-            } catch (jsonParseError) {
-                 throw new Error("Failed to parse prediction response as JSON.");
-            }
-
-            // Check if essential data is missing (e.g., if the model returned a success status 
-            // but an empty payload, which should be caught by backend, but checked here for safety)
-            if (!data || !data.crop_suggestions || data.crop_suggestions.length === 0) {
-                 throw new Error("Prediction successful, but no valid results were returned.");
-            }
-
-            displayResults(data);
-
-        } catch (error) {
-            showError(`Prediction failed: ${error.message}`);
-        } finally {
-            hideLoader();
+        if (
+          !data ||
+          !Array.isArray(data.crop_suggestions) ||
+          data.crop_suggestions.length === 0
+        ) {
+          throw new Error(t("prediction-empty"));
         }
+        displayResults(data);
+      } catch (error) {
+        console.error("Predict error:", error);
+        showError(`Prediction failed: ${error.message}`);
+      } finally {
+        hideLoader();
+      }
     });
+  }
 
-    // Helper functions
-    function showLoader() {
-        loader.style.display = 'flex';
-        submitBtn.disabled = true;
-        formContainer.style.display = 'none';
-        resultsContainer.style.display = 'none'; // Ensure results are hidden when loading
-    }
-
-    function hideLoader() {
-        loader.style.display = 'none';
-        submitBtn.disabled = false;
-        formContainer.style.display = 'block';
-    }
-
-    function showError(message) {
-        errorMessage.textContent = message;
-        errorMessage.style.display = 'block';
-        resultsContainer.style.display = 'none'; // Ensure results are hidden if error occurs
-    }
-
-    function hideError() {
-        errorMessage.style.display = 'none';
-    }
-
-    function displayResults(data) {
-        resultsContainer.innerHTML = '';
-        resultsContainer.style.display = 'block';
-
-        const weatherData = data.weather_data;
-        const lang = languageSelect.value;
-        const weatherHTML = `
-            <div class="result-card">
-                <h3 class="result-title">${translations[lang]['result-title-weather']}</h3>
-                <p class="result-text">
-                    <strong>${translations[lang]['weather-country-label']}:</strong> ${weatherData.country}<br>
-                    <strong>${translations[lang]['weather-state-label']}:</strong> ${weatherData.state}<br>
-                    <strong>${translations[lang]['weather-temp-label']}:</strong> ${weatherData.temperature.toFixed(2)} °C<br>
-                    <strong>${translations[lang]['weather-humidity-label']}:</strong> ${weatherData.humidity.toFixed(2)}%<br>
-                    <strong>${translations[lang]['weather-moisture-label']}:</strong> ${weatherData.moisture.toFixed(2)}%
-                </p>
+  // ---------------------------
+  // Top-3 crop UI & results render
+  // ---------------------------
+  function renderTop3(cropSuggestions, lang) {
+    const list = cropSuggestions.slice(0, 3);
+    const safe = (v) => Math.max(0, Math.min(1, Number(v || 0)));
+    const maxProb = Math.max(...list.map((c) => safe(c.confidence)));
+    const items = list
+      .map((c, idx) => {
+        const pct = (safe(c.confidence) * 100).toFixed(1);
+        const rel = maxProb > 0 ? Math.min(100, (safe(c.confidence) / maxProb) * 100) : 0;
+        const name = c.name ?? c.crop ?? "—";
+        return `
+          <li class="top3-item">
+            <div class="top3-row">
+              <span class="rank">#${idx + 1}</span>
+              <span class="crop-name">${name}</span>
+              <span class="prob">${pct}%</span>
             </div>
-        `;
+            <div class="prob-bar">
+              <div class="prob-bar-fill" style="width:${rel}%"></div>
+            </div>
+          </li>`;
+      })
+      .join("");
 
-        const resultHTML = `
-            <div class="result-card">
-                <h3 class="result-title">${translations[lang]['result-title-crop']}</h3>
-                <p class="result-text">${translations[lang]['result-recommendation-prefix']} <strong>${data.crop_suggestions[0].name}</strong>.</p>
-            </div>
-            <div class="result-card">
-                <h3 class="result-title">${translations[lang]['result-title-fert']}</h3>
-                <p class="result-text">Based on your soil, we recommend using <strong>${data.fertilizer_recommendations[0].name}</strong>. Apply it as follows: <strong>${data.fertilizer_recommendations[0].amount}</strong>, with a frequency of <strong>${data.fertilizer_recommendations[0].frequency}</strong>.</p>
-            </div>
-            <div class="result-card">
-                <h3 class="result-title">${translations[lang]['result-title-explanation']}</h3>
-                <p class="result-text">${data.explanation}</p>
-            </div>
-            <p class="result-metadata">${translations[lang]['result-metadata-time']} ${data.inference_time_ms.toFixed(2)} ms | ${translations[lang]['result-metadata-version']} ${data.model_version}</p>
-        `;
+    return `
+      <div class="top3-wrapper">
+        <div class="top3-title">${t("result-top3", lang)}</div>
+        <ul class="top3-list">${items}</ul>
+      </div>`;
+  }
 
-        resultsContainer.innerHTML = weatherHTML + resultHTML;
-        formContainer.style.display = 'none';
-    }
-    
-    // Initial content update based on default language
-    updateContent(languageSelect ? languageSelect.value : 'en');
+  function displayResults(data) {
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = "";
+    resultsContainer.style.display = "block";
+
+    const lang = languageSelect ? languageSelect.value : "en";
+    const weatherData = data.weather_data || {};
+
+    const weatherHTML = `
+      <div class="result-card">
+        <h3 class="result-title">${t("result-title-weather", lang)}</h3>
+        <p class="result-text">
+          <strong>${t("weather-country-label", lang)}:</strong> ${weatherData.country ?? "—"}<br>
+          <strong>${t("weather-state-label", lang)}:</strong> ${weatherData.state ?? "—"}<br>
+          <strong>${t("weather-temp-label", lang)}:</strong> ${Number(weatherData.temperature || 0).toFixed(2)} °C<br>
+          <strong>${t("weather-humidity-label", lang)}:</strong> ${Number(weatherData.humidity || 0).toFixed(2)}%<br>
+          <strong>${t("weather-moisture-label", lang)}:</strong> ${Number(weatherData.moisture || 0).toFixed(2)}%
+        </p>
+      </div>`;
+
+    const primary = data.crop_suggestions[0];
+    const primaryName = primary?.name ?? primary?.crop ?? "—";
+    const primaryLine = `
+      <p class="result-text">
+        ${t("result-recommendation-prefix", lang)} <strong>${primaryName}</strong>.
+      </p>`;
+
+    const top3HTML = renderTop3(data.crop_suggestions, lang);
+
+    const fert =
+      data.fertilizer_recommendations && data.fertilizer_recommendations[0]
+        ? data.fertilizer_recommendations[0]
+        : { name: "N/A", amount: "—", frequency: "—" };
+
+    const fertHTML = `
+      <div class="result-card">
+        <h3 class="result-title">${t("result-title-fert", lang)}</h3>
+        <p class="result-text">
+          Based on your soil, we recommend using <strong>${fert.name}</strong>.
+          Apply it as follows: <strong>${fert.amount}</strong>, with a frequency of
+          <strong>${fert.frequency}</strong>.
+        </p>
+      </div>`;
+
+    const explainHTML = `
+      <div class="result-card">
+        <h3 class="result-title">${t("result-title-explanation", lang)}</h3>
+        <p class="result-text">${data.explanation || ""}</p>
+      </div>`;
+
+    const metaHTML = `
+      <p class="result-metadata">
+        ${t("result-metadata-time", lang)} ${Number(data.inference_time_ms || 0).toFixed(2)} ms |
+        ${t("result-metadata-version", lang)} ${data.model_version || ""}
+      </p>`;
+
+    const cropHTML = `
+      <div class="result-card">
+        <h3 class="result-title">${t("result-title-crop", lang)}</h3>
+        ${primaryLine}
+        ${top3HTML}
+      </div>`;
+
+    resultsContainer.innerHTML =
+      weatherHTML + cropHTML + fertHTML + explainHTML + metaHTML;
+
+    if (formContainer) formContainer.style.display = "none";
+  }
+
+  // Initial content sync
+  updateContent(languageSelect ? languageSelect.value : "en");
 });
